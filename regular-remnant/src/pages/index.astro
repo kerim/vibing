@@ -1,0 +1,52 @@
+---
+import Pagination from '@/components/Pagination.astro'
+import PostsGrid from '@/components/posts/PostsGrid.astro'
+import PostsList from '@/components/posts/PostsList.astro'
+import PageLayout, {
+  type Props as PageLayoutProps
+} from '@/layouts/PageLayout.astro'
+import config from '@/theme.config'
+import { getPosts, getPostsPageDescription } from '@/util/posts'
+
+const posts = await getPosts()
+const pageSize = config.postsPerPage
+const totalPages = Math.ceil(posts.length / pageSize)
+const pageData = posts.slice(0, pageSize)
+
+const page = {
+  data: pageData,
+  start: 0,
+  end: pageData.length - 1,
+  total: posts.length,
+  size: pageSize,
+  currentPage: 1,
+  lastPage: totalPages,
+  url: {
+    prev: undefined,
+    next: totalPages > 1 ? '/posts/2' : undefined,
+    current: '/',
+    first: undefined,
+    last: totalPages > 1 ? `/posts/${totalPages}` : undefined
+  }
+}
+
+const frontmatter: PageLayoutProps['frontmatter'] = {
+  title: 'Posts',
+  activeHeaderLink: 'Blog'
+}
+
+const PageDescription = getPostsPageDescription()
+---
+
+<PageLayout {frontmatter}>
+  <h1>
+    {frontmatter.title}
+  </h1>
+
+  {PageDescription && <PageDescription />}
+
+  {config.postsView === 'list' && <PostsList posts={page.data} />}
+  {config.postsView === 'grid' && <PostsGrid posts={page.data} />}
+
+  <Pagination slot="bottom" page={page} />
+</PageLayout>

@@ -6,9 +6,9 @@ export default defineThemeConfig({
   description: 'Experiments in AI Coding',
   author: 'P. Kerim Friedman',
   navbarItems: [
-    { label: 'Blog', href: '/posts/' },
+    { label: 'Blog', href: '/' },
     { label: 'Tags', href: '/tags/' },
-    { label: 'About', href: '/about/' },
+    { label: 'About', href: '/about/' }
   ],
   footerItems: [
     {

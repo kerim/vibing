@@ -10,8 +10,11 @@ import sectionizePlugin from 'remark-sectionize'
 import readingTimePlugin from './src/plugins/readingTimePlugin'
 import config from './src/theme.config'
 
+import cloudflare from '@astrojs/cloudflare';
+
 export default defineConfig({
   site: config.site,
+
   integrations: [
     expressiveCode({
       themes: config.expressiveCodeThemes,
@@ -33,5 +36,7 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()]
-  }
+  },
+
+  adapter: cloudflare()
 })
