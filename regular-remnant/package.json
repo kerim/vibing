@@ -1,0 +1,84 @@
+{
+  "name": "regular-remnant",
+  "type": "module",
+  "version": "3.4.0",
+  "description": "A minimal Astro blog theme",
+  "author": "FjellOverflow",
+  "license": "GPL-3.0-only",
+  "homepage": "https://github.com/FjellOverflow/nordlys",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FjellOverflow/nordlys.git"
+  },
+  "bugs": {
+    "url": "https://github.com/FjellOverflow/nordlys/issues"
+  },
+  "keywords": [
+    "astro",
+    "blog",
+    "template",
+    "theme",
+    "tailwindcss"
+  ],
+  "scripts": {
+    "dev": "astro dev",
+    "lint": "eslint . && stylelint src",
+    "check": "pnpm lint && astro check",
+    "build": "astro build",
+    "preview": "pnpm build && astro preview",
+    "release": "pnpm check && commit-and-tag-version --sign",
+    "postbuild": "pagefind --site dist"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.6",
+    "@astrojs/mdx": "^4.3.13",
+    "@astrojs/rss": "^4.0.15",
+    "@astrojs/sitemap": "^3.7.0",
+    "@expressive-code/plugin-collapsible-sections": "^0.41.6",
+    "@expressive-code/plugin-line-numbers": "^0.41.6",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@iconify-json/tabler": "^1.2.26",
+    "@resvg/resvg-js": "^2.6.2",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.1.18",
+    "astro": "^5.17.1",
+    "astro-expressive-code": "^0.41.6",
+    "mdast-util-to-string": "^4.0.0",
+    "pagefind": "^1.4.0",
+    "reading-time": "^1.5.0",
+    "remark-sectionize": "^2.1.0",
+    "satori": "^0.18.4",
+    "sharp": "^0.34.5",
+    "tailwind-scrollbar-hide": "^4.0.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@iconify/tailwind4": "^1.2.1",
+    "@typescript-eslint/parser": "^8.54.0",
+    "commit-and-tag-version": "^12.6.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^1.5.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.2.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "stylelint": "^17.1.0",
+    "stylelint-config-html": "^1.1.0",
+    "stylelint-config-recommended": "^18.0.0",
+    "type-fest": "^5.4.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
+  },
+  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp"
+    ]
+  }
+}
