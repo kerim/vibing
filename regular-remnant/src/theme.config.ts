@@ -31,14 +31,8 @@ export default defineThemeConfig({
   openGraphImage: undefined,
   postsPerPage: 5,
   postsView: 'list',
-  projectsPerPage: 3,
-  projectsView: 'list',
   scrollProgress: false,
   scrollToTop: true,
-  tagIcons: {
-    tailwindcss: 'tabler--brand-tailwind',
-    astro: 'tabler--brand-astro',
-    documentation: 'tabler--book'
-  },
+  tagIcons: {},
   expressiveCodeThemes: ['vitesse-light', 'vitesse-black']
 })

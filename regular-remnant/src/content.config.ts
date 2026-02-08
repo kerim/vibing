@@ -14,25 +14,9 @@ const posts = defineCollection({
       canonicalURL: z.string().optional(),
       openGraphImage: image().optional(),
       tags: z.array(z.string()).default([]),
-      showToC: z.boolean().optional().default(true),
+      showToC: z.boolean().optional().default(false),
       previewImage: image().optional()
     })
 })
 
-const projects = defineCollection({
-  loader: glob({
-    pattern: '**/[^_]*.{md,mdx}',
-    base: './content/projects'
-  }),
-  schema: ({ image }) =>
-    z.object({
-      title: z.string(),
-      url: z.string().optional(),
-      startDate: z.date().optional().nullable(),
-      endDate: z.date().optional().nullable(),
-      tags: z.array(z.string()).default([]),
-      previewImage: image().optional()
-    })
-})
-
-export const collections = { posts, projects }
+export const collections = { posts }

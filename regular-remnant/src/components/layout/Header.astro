@@ -1,5 +1,4 @@
 ---
-import logo from '@/assets/logo.svg'
 import Dropdown from '@/components/Dropdown.astro'
 import HeaderItem from '@/components/layout/HeaderItem.astro'
 import MobileNavToggle from '@/components/layout/MobileNavToggle.astro'
@@ -10,7 +9,6 @@ import type {
   HeaderItem as HeaderItemType,
   NavItem as NavItemType
 } from '@/types'
-import { Image } from 'astro:assets'
 
 export interface Props {
   activeHeaderLink?: string
@@ -26,20 +24,17 @@ export const isNavItem = (item: HeaderItemType): item is NavItemType =>
   <a href="#main" class="absolute -top-full left-8 px-2 py-2 focus:top-8"
     >Skip to main content</a
   >
-  <div class="flex justify-between py-4 sm:py-8">
-    <a
-      href="/"
-      class="text-accent flex gap-2 text-2xl font-semibold"
-      transition:name="branding"
-    >
-      <Image
-        alt="Nordlys logo, simplified northern lights aurora visualization"
-        src={logo}
-        height={24}
-        loading="eager"
-      />
-      {config.title}
-    </a>
+  <div class="flex items-start justify-between pt-4 pb-2 sm:pt-8 sm:pb-2">
+    <div class="flex flex-col">
+      <a
+        href="/"
+        class="text-accent flex gap-2 text-2xl font-semibold"
+        transition:name="branding"
+      >
+        {config.title}
+      </a>
+      <span class="text-accent/60 text-sm">{config.description}</span>
+    </div>
     <nav class="hidden flex-col justify-end sm:flex">
       <ul class="flex gap-6">
         {
