@@ -1,7 +1,7 @@
 import { defineThemeConfig } from './types'
 
 export default defineThemeConfig({
-  site: 'https://nordlys.fjelloverflow.dev',
+  site: 'https://vibing.kerim.one',
   title: 'Vibing With Kerim',
   description: 'Experiments in AI Coding',
   author: 'P. Kerim Friedman',

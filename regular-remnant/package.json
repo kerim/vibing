@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.6",
-    "@astrojs/cloudflare": "^12.6.12",
     "@astrojs/mdx": "^4.3.13",
     "@astrojs/rss": "^4.0.15",
     "@astrojs/sitemap": "^3.7.0",
@@ -72,8 +71,7 @@
     "stylelint-config-recommended": "^18.0.0",
     "type-fest": "^5.4.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
-    "wrangler": "^4.63.0"
+    "typescript-eslint": "^8.54.0"
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
   "pnpm": {
@@ -82,8 +80,6 @@
       "esbuild",
       "sharp"
     ],
-    "ignoredBuiltDependencies": [
-      "workerd"
-    ]
+    "ignoredBuiltDependencies": []
   }
 }
