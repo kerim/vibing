@@ -4,6 +4,7 @@ description: Getting notifications on your phone
 publishedDate: 2026-02-09
 tags:
   - claude code
+  - iPhone
 previewImage: './_button.jpg'
 ---
 
