@@ -9,6 +9,8 @@ tags:
 previewImage: './_applenotes.png'
 ---
 
+My big vibe-coding project is a word processor for academics. In addition to writing about coding, I also want to write about some of the design decisions that have gone into my app. This is the first post in that series.
+
 How do you display hierarchy in a word processing app? Let's start by taking a look at how Apple Notes does it:
 
 ![](_applenotes.png)
