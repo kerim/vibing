@@ -59,5 +59,5 @@ Here is another prompt that I find useful. It has helped prevent wasted effort b
 
 ### Give it to another AI
 
-Sometimes Claude just seems studk, it might help to feed the code to OpenAI or even an opensource LLM just to get a different perspective. When their suggestions are fed back to Claude it sometimes provokes some creative thinking. 
+Sometimes Claude just seems stuck, it might help to feed the code to OpenAI or even an opensource LLM just to get a different perspective. When their suggestions are fed back to Claude it sometimes provokes some creative thinking. 
 
