@@ -37,3 +37,7 @@ The editor tests go one step further. They use a pre-built test fixture — a sm
 Each test takes a few seconds. The full suite runs in about 40 seconds. That's fast enough to run on every commit.
 
 Smoke tests are the pure minimum. I still have to manually check that the app is working, but these serve an important purpose: they answer the question, **does this thing basically work?** If the answer is no, nothing else matters yet. They are simple enough and fast enough that I can leave it to the AI to run them and then check out more complex user-interactions myself. 
+
+## How to do testing in Swift
+
+I didn't realize this when I started, but Apple's XCode allows you to run an app, open windows, even take screenshots for analysis, via the command line. Here is some [documentation](https://developer.apple.com/documentation/xcuiautomation) on this from apple. I also used the [Axiom](https://github.com/charleswiltgen/axiom) plugin to help teach Claude how to do this. If I'd figured this out earlier it would have saved me a lot of headaches!
