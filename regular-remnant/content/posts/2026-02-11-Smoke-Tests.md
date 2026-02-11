@@ -6,6 +6,7 @@ tags:
   - claude code
   - workflows
   - bugs
+  - testing
 previewImage: './_smoke-test.webp'
 ---
 
