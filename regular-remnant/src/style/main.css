@@ -19,6 +19,16 @@
     .zoom-overlay {
       background-color: #000000bf !important;
     }
+
+    a.internal {
+      text-decoration-style: dotted;
+      text-decoration-color: rgb(var(--accent));
+    }
+
+    a.internal.new {
+      color: rgb(var(--accent) / 0.4);
+      text-decoration-color: rgb(var(--accent) / 0.3);
+    }
   }
 }
 

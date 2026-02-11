@@ -8,6 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 import expressiveCode from 'astro-expressive-code'
 import sectionizePlugin from 'remark-sectionize'
 import readingTimePlugin from './src/plugins/readingTimePlugin'
+import remarkWikiLinks from './src/plugins/wikiLinkPlugin'
 import config from './src/theme.config'
 
 export default defineConfig({
@@ -29,7 +30,7 @@ export default defineConfig({
   ],
 
   markdown: {
-    remarkPlugins: [readingTimePlugin, sectionizePlugin]
+    remarkPlugins: [remarkWikiLinks(), readingTimePlugin, sectionizePlugin]
   },
 
   vite: {
