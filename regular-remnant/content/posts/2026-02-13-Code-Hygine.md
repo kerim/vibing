@@ -1,7 +1,7 @@
 ---
 title: Code Hygine
 description: On the importance of refactoring and linting
-publishedDate: 2026-02-11
+publishedDate: 2026-02-13
 tags:
   - claude code
   - workflows
