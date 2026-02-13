@@ -1,6 +1,6 @@
 ---
 title: Smoke Tests
-description: Having Claude verifify its work
+description: Having Claude verify its work
 publishedDate: 2026-02-12
 tags:
   - claude code
