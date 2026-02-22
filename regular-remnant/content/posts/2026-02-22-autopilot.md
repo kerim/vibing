@@ -7,7 +7,8 @@ tags:
   - workflows
 previewImage: './_steering-wheel.avif'
 ---
-![](/Users/niyaro/Documents/GitHub/vibing/regular-remnant/content/posts/_steering-wheel.avif) 
+
+![](_steering-wheel.avif) 
 
 When using assisted mode on cars they tell you to keep your hands on the wheel. You have to do the same when vibe coding. I'm not really qualified to review the code it generates, so I use agents to review the code for me. I will run each plan by the coding agents over and over again (usually 2-3 times) until you get a review that only discovers minor errors, not "critical" ones. (That's in Claude's own language.) 
 
