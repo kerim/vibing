@@ -5,7 +5,7 @@ publishedDate: 2026-02-10
 tags:
   - design
   - ui
-  - word-processor 
+  - FINAL|FINAL 
 previewImage: './_applenotes.png'
 ---
 
