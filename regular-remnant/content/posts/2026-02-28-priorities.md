@@ -1,11 +1,12 @@
 ---
-title: Priorities
+title: Images
 description: Thinking of features like a developer
 publishedDate: 2026-02-28
 tags:
   - claude code
   - ui
-  - FINAL|FINAL 
+  - final-final
+  - features 
 previewImage: './__painting.webp'
 ---
 

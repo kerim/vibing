@@ -5,7 +5,8 @@ publishedDate: 2026-02-10
 tags:
   - design
   - ui
-  - FINAL|FINAL 
+  - final-final
+  - features 
 previewImage: './_applenotes.png'
 ---
 
