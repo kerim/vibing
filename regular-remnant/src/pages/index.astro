@@ -1,5 +1,4 @@
 ---
-import Pagination from '@/components/Pagination.astro'
 import PostsGrid from '@/components/posts/PostsGrid.astro'
 import PostsList from '@/components/posts/PostsList.astro'
 import PageLayout, {
@@ -12,23 +11,6 @@ const posts = await getPosts()
 const pageSize = config.postsPerPage
 const totalPages = Math.ceil(posts.length / pageSize)
 const pageData = posts.slice(0, pageSize)
-
-const page = {
-  data: pageData,
-  start: 0,
-  end: pageData.length - 1,
-  total: posts.length,
-  size: pageSize,
-  currentPage: 1,
-  lastPage: totalPages,
-  url: {
-    prev: undefined,
-    next: totalPages > 1 ? '/posts/2' : undefined,
-    current: '/',
-    first: undefined,
-    last: totalPages > 1 ? `/posts/${totalPages}` : undefined
-  }
-}
 
 const frontmatter: PageLayoutProps['frontmatter'] = {
   title: 'Posts',
@@ -45,8 +27,75 @@ const PageDescription = getPostsPageDescription()
 
   {PageDescription && <PageDescription />}
 
-  {config.postsView === 'list' && <PostsList posts={page.data} />}
-  {config.postsView === 'grid' && <PostsGrid posts={page.data} />}
+  {config.postsView === 'list' && <PostsList posts={pageData} />}
+  {config.postsView === 'grid' && <PostsGrid posts={pageData} />}
 
-  <Pagination slot="bottom" page={page} />
+  {totalPages > 1 && (
+    <div id="scroll-sentinel" data-total-pages={totalPages}>
+      Loading more posts...
+    </div>
+  )}
+
+  <noscript>
+    <a href="/posts/2/">View more posts</a>
+  </noscript>
 </PageLayout>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const sentinel = document.getElementById('scroll-sentinel')
+    if (!sentinel) return
+
+    const postsList = document.getElementById('posts-list')
+    if (!postsList) return
+
+    const totalPages = parseInt(sentinel.dataset.totalPages || '1', 10)
+    let currentPage = 2
+    let isLoading = false
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (!entry.isIntersecting || isLoading) return
+
+        isLoading = true
+
+        fetch(`/posts/${currentPage}/`)
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return res.text()
+          })
+          .then((html) => {
+            const doc = new DOMParser().parseFromString(html, 'text/html')
+            const fetchedList = doc.getElementById('posts-list')
+            if (!fetchedList) throw new Error('Could not find posts list')
+
+            const separator = document.createElement('hr')
+            separator.className = 'border-separate border-accent/75 mt-6 mb-6'
+            postsList.appendChild(separator)
+
+            const items = fetchedList.querySelectorAll(':scope > li')
+            items.forEach((item) => {
+              postsList.appendChild(document.adoptNode(item))
+            })
+
+            currentPage++
+            isLoading = false
+
+            if (currentPage > totalPages) {
+              observer.disconnect()
+              sentinel.remove()
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to load more posts:', err)
+            sentinel.remove()
+            observer.disconnect()
+          })
+      },
+      { rootMargin: '200px' }
+    )
+
+    observer.observe(sentinel)
+  })
+</script>

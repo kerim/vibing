@@ -29,7 +29,7 @@ export default defineThemeConfig({
   modeToggle: true,
   colorScheme: 'scheme-mono',
   openGraphImage: undefined,
-  postsPerPage: 5,
+  postsPerPage: 10,
   postsView: 'list',
   scrollProgress: false,
   scrollToTop: true,
