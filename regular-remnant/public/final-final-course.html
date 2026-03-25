@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How FINAL|FINAL Works Under the Hood</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-bg:#FAF7F2;--color-bg-warm:#F5F0E8;--color-bg-code:#1E1E2E;
+  --color-text:#2C2A28;--color-text-secondary:#6B6560;--color-text-muted:#9E9790;
+  --color-border:#E5DFD6;--color-border-light:#EEEBE5;
+  --color-surface:#FFFFFF;--color-surface-warm:#FDF9F3;
+  --color-accent:#2A7B9B;--color-accent-hover:#1F6882;
+  --color-accent-light:#E4F2F7;--color-accent-muted:#5BA3BD;
+  --color-success:#2D8B55;--color-success-light:#E8F5EE;
+  --color-error:#C93B3B;--color-error-light:#FDE8E8;
+  --color-info:#2A7B9B;--color-info-light:#E4F2F7;
+  --color-actor-1:#D94F30;--color-actor-2:#2A7B9B;--color-actor-3:#7B6DAA;
+  --color-actor-4:#D4A843;--color-actor-5:#2D8B55;
+  --font-display:'Bricolage Grotesque',Georgia,serif;
+  --font-body:'DM Sans',-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code','Consolas',monospace;
+  --text-xs:0.75rem;--text-sm:0.875rem;--text-base:1rem;--text-lg:1.125rem;
+  --text-xl:1.25rem;--text-2xl:1.5rem;--text-3xl:1.875rem;--text-4xl:2.25rem;
+  --text-5xl:3rem;--text-6xl:3.75rem;
+  --leading-tight:1.15;--leading-snug:1.3;--leading-normal:1.6;--leading-loose:1.8;
+  --space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;
+  --space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;
+  --space-12:3rem;--space-16:4rem;--space-20:5rem;--space-24:6rem;
+  --content-width:800px;--content-width-wide:1000px;--nav-height:50px;
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-full:9999px;
+  --shadow-sm:0 1px 2px rgba(44,42,40,0.05);--shadow-md:0 4px 12px rgba(44,42,40,0.08);
+  --shadow-lg:0 8px 24px rgba(44,42,40,0.1);--shadow-xl:0 16px 48px rgba(44,42,40,0.12);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);--ease-in-out:cubic-bezier(0.65,0,0.35,1);
+  --duration-fast:150ms;--duration-normal:300ms;--duration-slow:500ms;--stagger-delay:120ms;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y proximity;scroll-behavior:smooth}
+body{font-family:var(--font-body);font-size:var(--text-base);line-height:var(--leading-normal);color:var(--color-text);background:var(--color-bg);background-image:radial-gradient(ellipse at 20% 50%,rgba(42,123,155,0.03) 0%,transparent 50%);-webkit-font-smoothing:antialiased}
+pre,code{white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:var(--radius-full)}
+img{max-width:100%}button{cursor:pointer;font-family:var(--font-body)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(250,247,242,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--color-border-light);height:var(--nav-height)}
+.progress-bar{position:absolute;top:0;left:0;height:3px;background:var(--color-accent);width:0%;transition:width 100ms linear}
+.nav-inner{max-width:var(--content-width-wide);margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-6)}
+.nav-title{font-family:var(--font-display);font-weight:700;font-size:var(--text-sm);color:var(--color-text)}
+.nav-dots{display:flex;gap:var(--space-3);align-items:center}
+.nav-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--color-text-muted);background:transparent;padding:0;transition:all var(--duration-normal) var(--ease-out);position:relative}
+.nav-dot:hover{border-color:var(--color-accent)}
+.nav-dot.current{border-color:var(--color-accent);background:var(--color-accent);box-shadow:0 0 8px rgba(42,123,155,0.3)}
+.nav-dot.visited{border-color:var(--color-accent);background:var(--color-accent)}
+.nav-dot-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--color-bg-code);color:#CDD6F4;font-size:var(--text-xs);padding:var(--space-1) var(--space-3);border-radius:var(--radius-sm);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--duration-fast)}
+.nav-dot:hover .nav-dot-tooltip{opacity:1}
+.module{min-height:100dvh;min-height:100vh;scroll-snap-align:start;padding:var(--space-16) var(--space-6);padding-top:calc(var(--nav-height) + var(--space-12))}
+.module-content{max-width:var(--content-width);margin:0 auto}
+.module-header{margin-bottom:var(--space-12)}
+.module-number{font-family:var(--font-display);font-size:var(--text-6xl);font-weight:800;color:var(--color-accent);opacity:0.15;line-height:var(--leading-tight);display:block;margin-bottom:var(--space-2)}
+.module-title{font-family:var(--font-display);font-size:var(--text-4xl);font-weight:700;line-height:var(--leading-tight);color:var(--color-text);margin-bottom:var(--space-3)}
+.module-subtitle{font-size:var(--text-lg);color:var(--color-text-secondary);line-height:var(--leading-snug)}
+.screen{margin-bottom:var(--space-16)}
+.screen-heading{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:600;line-height:var(--leading-snug);color:var(--color-text);margin-bottom:var(--space-6)}
+.screen p{margin-bottom:var(--space-4);line-height:var(--leading-normal)}
+.animate-in{opacity:0;transform:translateY(20px);transition:opacity var(--duration-slow) var(--ease-out),transform var(--duration-slow) var(--ease-out)}
+.animate-in.visible{opacity:1;transform:translateY(0)}
+.stagger-children>.animate-in{transition-delay:calc(var(--stagger-index,0)*var(--stagger-delay))}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.translation-block{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-md);margin:var(--space-8) 0}
+.translation-code{background:var(--color-bg-code);color:#CDD6F4;padding:var(--space-6);font-family:var(--font-mono);font-size:var(--text-sm);line-height:1.7;position:relative;overflow-x:hidden}
+.translation-code pre,.translation-code code{white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
+.translation-english{background:var(--color-surface-warm);padding:var(--space-6);font-size:var(--text-sm);line-height:1.7;border-left:3px solid var(--color-accent)}
+.translation-label{position:absolute;top:var(--space-2);right:var(--space-3);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.1em;opacity:0.5}
+.translation-english .translation-label{color:var(--color-text-muted);position:relative;top:auto;right:auto;display:block;margin-bottom:var(--space-3)}
+.translation-lines{display:flex;flex-direction:column;gap:var(--space-2)}
+.tl{padding:var(--space-1) 0;border-bottom:1px solid var(--color-border-light);margin:0}.tl:last-child{border-bottom:none}
+.code-keyword{color:#CBA6F7}.code-string{color:#A6E3A1}.code-function{color:#89B4FA}.code-comment{color:#6C7086}.code-number{color:#FAB387}.code-property{color:#F9E2AF}.code-operator{color:#94E2D5}.code-tag{color:#F38BA8}.code-type{color:#89B4FA}
+.callout{display:flex;gap:var(--space-4);padding:var(--space-5);border-radius:var(--radius-md);margin:var(--space-6) 0}
+.callout-accent{background:var(--color-accent-light);border-left:4px solid var(--color-accent)}
+.callout-info{background:var(--color-info-light);border-left:4px solid var(--color-info)}
+.callout-warning{background:var(--color-error-light);border-left:4px solid var(--color-error)}
+.callout-icon{font-size:1.5rem;flex-shrink:0;line-height:1}.callout-content{flex:1}
+.callout-title{display:block;font-weight:700;margin-bottom:var(--space-2);font-size:var(--text-base)}
+.callout-content p{font-size:var(--text-sm);margin:0;color:var(--color-text-secondary)}
+.pattern-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-4);margin:var(--space-8) 0}
+.pattern-card{background:var(--color-surface);border-radius:var(--radius-md);padding:var(--space-6);box-shadow:var(--shadow-sm);transition:transform var(--duration-normal) var(--ease-out),box-shadow var(--duration-normal)}
+.pattern-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
+.pattern-icon{width:48px;height:48px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:var(--space-3);color:white}
+.pattern-title{font-family:var(--font-display);font-weight:600;font-size:var(--text-base);margin-bottom:var(--space-2)}
+.pattern-desc{font-size:var(--text-sm);color:var(--color-text-secondary);line-height:var(--leading-normal);margin:0}
+.icon-rows{display:flex;flex-direction:column;gap:var(--space-4);margin:var(--space-6) 0}
+.icon-row{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}
+.icon-row p{margin:0;color:var(--color-text-secondary);font-size:var(--text-sm)}
+.icon-circle{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;color:white}
+.step-cards{display:flex;flex-direction:column;gap:var(--space-3);margin:var(--space-6) 0}
+.step-card{display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-4) var(--space-5);background:var(--color-surface);border-radius:var(--radius-md);border-left:3px solid var(--color-accent);box-shadow:var(--shadow-sm)}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--color-accent);color:white;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);flex-shrink:0}
+.step-body strong{display:block;margin-bottom:var(--space-1)}.step-body p{margin:var(--space-1) 0 0;color:var(--color-text-secondary);font-size:var(--text-sm)}
+.flow-steps{display:flex;align-items:center;gap:var(--space-2);margin:var(--space-6) 0;flex-wrap:wrap;justify-content:center}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);min-width:100px;text-align:center}
+.flow-step-num{width:28px;height:28px;border-radius:50%;background:var(--color-accent);color:white;font-weight:700;font-size:var(--text-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-display)}
+.flow-step p{font-size:var(--text-sm);margin:0}.flow-arrow{font-size:var(--text-2xl);color:var(--color-accent);font-weight:700}
+.chat-window{background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;margin:var(--space-8) 0}
+.chat-header{background:var(--color-bg-code);color:#CDD6F4;padding:var(--space-3) var(--space-4);font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600}
+.chat-messages{padding:var(--space-4);min-height:200px;max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-3)}
+.chat-message{display:flex;gap:var(--space-3);align-items:flex-start;animation:fadeSlideUp 0.3s var(--ease-out)}
+.chat-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:var(--text-xs);flex-shrink:0;font-family:var(--font-mono)}
+.chat-bubble{background:var(--color-bg);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);max-width:80%}
+.chat-sender{font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:var(--space-1)}
+.chat-bubble p{font-size:var(--text-sm);margin:0}
+.chat-typing{display:flex;gap:var(--space-3);align-items:center;padding:0 var(--space-4);margin-bottom:var(--space-3)}
+.chat-typing-dots{display:flex;gap:4px}
+.typing-dot{width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);animation:typingBounce 1.4s infinite}
+.typing-dot:nth-child(2){animation-delay:0.2s}.typing-dot:nth-child(3){animation-delay:0.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.chat-controls{padding:var(--space-3) var(--space-4);border-top:1px solid var(--color-border-light);display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.chat-controls button{padding:var(--space-2) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);font-size:var(--text-sm);transition:all var(--duration-fast)}
+.chat-controls button:hover{border-color:var(--color-accent);color:var(--color-accent)}
+.chat-progress{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:auto}
+.flow-animation{background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);margin:var(--space-8) 0;text-align:center}
+.flow-actors{display:flex;justify-content:space-around;align-items:center;margin-bottom:var(--space-6);flex-wrap:wrap;gap:var(--space-4)}
+.flow-actor{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-4);border-radius:var(--radius-md);border:2px solid var(--color-border);min-width:100px;transition:all var(--duration-normal) var(--ease-out)}
+.flow-actor.active{box-shadow:0 0 0 3px var(--color-accent),0 0 20px rgba(42,123,155,0.2);transform:scale(1.05)}
+.flow-actor-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-family:var(--font-mono)}
+.flow-actor span{font-size:var(--text-sm);font-weight:500}
+.flow-step-label{font-size:var(--text-base);padding:var(--space-3) var(--space-4);background:var(--color-bg);border-radius:var(--radius-sm);margin-bottom:var(--space-4);min-height:48px;display:flex;align-items:center;justify-content:center}
+.flow-controls{display:flex;align-items:center;justify-content:center;gap:var(--space-3)}
+.flow-controls button{padding:var(--space-2) var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);font-size:var(--text-sm);transition:all var(--duration-fast)}
+.flow-controls button:hover{border-color:var(--color-accent);color:var(--color-accent)}
+.flow-progress{font-size:var(--text-xs);color:var(--color-text-muted)}
+.arch-diagram{background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-6);margin:var(--space-8) 0}
+.arch-zones{display:grid;grid-template-columns:1fr 2fr 1fr;gap:var(--space-4);margin-bottom:var(--space-4)}
+.arch-zone{border:2px dashed var(--color-border);border-radius:var(--radius-md);padding:var(--space-4)}
+.arch-zone-label{font-family:var(--font-mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);margin-bottom:var(--space-3)}
+.arch-component{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-sm);border:1px solid var(--color-border-light);cursor:pointer;transition:all var(--duration-fast);margin-bottom:var(--space-2)}
+.arch-component:hover{border-color:var(--color-accent);background:var(--color-accent-light)}
+.arch-component.active{border-color:var(--color-accent);background:var(--color-accent-light);box-shadow:var(--shadow-sm)}
+.arch-icon{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1rem;color:white;flex-shrink:0}
+.arch-component span{font-size:var(--text-sm);font-weight:500}
+.arch-description{padding:var(--space-4);background:var(--color-bg);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text-secondary);min-height:60px}
+.file-tree{font-family:var(--font-mono);font-size:var(--text-sm);margin:var(--space-6) 0;background:var(--color-surface);border-radius:var(--radius-md);padding:var(--space-4);box-shadow:var(--shadow-sm)}
+.ft-folder,.ft-file{padding:var(--space-2) var(--space-3);border-left:2px solid var(--color-border-light);margin-left:var(--space-4)}
+.ft-folder>.ft-name{color:var(--color-accent);font-weight:600}.ft-file>.ft-name{color:var(--color-text)}
+.ft-desc{color:var(--color-text-secondary);font-family:var(--font-body);margin-left:var(--space-2);font-size:var(--text-xs)}
+.ft-children{margin-left:var(--space-4)}.ft-root{border-left:none;margin-left:0}
+.layer-demo{background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;margin:var(--space-8) 0}
+.layer-tabs{display:flex;border-bottom:1px solid var(--color-border-light)}
+.layer-tab{flex:1;padding:var(--space-3) var(--space-4);border:none;background:var(--color-surface);font-size:var(--text-sm);font-weight:500;color:var(--color-text-secondary);transition:all var(--duration-fast);border-bottom:2px solid transparent}
+.layer-tab.active{color:var(--color-accent);border-bottom-color:var(--color-accent);font-weight:600}
+.layer-tab:hover{background:var(--color-accent-light)}
+.layer-viewport{padding:var(--space-6);min-height:200px}
+.layer{display:none}.layer.active{display:block;animation:fadeSlideUp 0.3s var(--ease-out)}
+.layer-description{padding:var(--space-3) var(--space-6);font-size:var(--text-sm);color:var(--color-text-secondary);border-top:1px solid var(--color-border-light)}
+.term{border-bottom:1.5px dashed var(--color-accent-muted);cursor:pointer;position:relative}
+.term:hover,.term.active{border-bottom-color:var(--color-accent);color:var(--color-accent)}
+.term-tooltip{position:fixed;background:var(--color-bg-code);color:#CDD6F4;padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);font-size:var(--text-sm);font-family:var(--font-body);line-height:var(--leading-normal);width:max(200px,min(320px,80vw));box-shadow:var(--shadow-lg);pointer-events:none;opacity:0;transition:opacity var(--duration-fast);z-index:10000}
+.term-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--color-bg-code)}
+.term-tooltip.visible{opacity:1}
+.term-tooltip.flip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--color-bg-code)}
+.badge-list{display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-4) 0}
+.badge-item{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-4);border:1px solid var(--color-border-light);border-radius:var(--radius-sm);transition:border-color var(--duration-fast)}
+.badge-item:hover{border-color:var(--color-accent-muted)}
+.badge-code{font-family:var(--font-mono);font-size:var(--text-sm);background:var(--color-bg-code);color:#CBA6F7;padding:var(--space-1) var(--space-3);border-radius:var(--radius-sm);white-space:nowrap}
+.hero{min-height:100dvh;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;scroll-snap-align:start;padding:var(--space-16) var(--space-6);background:var(--color-bg)}
+.hero-content{max-width:700px}
+.hero-badge{display:inline-block;font-family:var(--font-mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.15em;color:var(--color-accent);background:var(--color-accent-light);padding:var(--space-1) var(--space-4);border-radius:var(--radius-full);margin-bottom:var(--space-6)}
+.hero h1{font-family:var(--font-display);font-size:var(--text-5xl);font-weight:800;line-height:var(--leading-tight);margin-bottom:var(--space-6)}
+.hero h1 em{font-style:normal;color:var(--color-accent)}
+.hero-lead{font-size:var(--text-lg);color:var(--color-text-secondary);line-height:var(--leading-loose);margin-bottom:var(--space-8)}
+.hero-scroll-hint{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);color:var(--color-text-muted);font-size:var(--text-sm);animation:gentleBounce 2s infinite}
+@keyframes gentleBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+@media(max-width:768px){:root{--text-4xl:1.875rem;--text-5xl:2.25rem;--text-6xl:3rem}.translation-block{grid-template-columns:1fr}.translation-english{border-left:none;border-top:3px solid var(--color-accent)}.pattern-cards{grid-template-columns:1fr 1fr}.arch-zones{grid-template-columns:1fr}}
+@media(max-width:480px){:root{--text-4xl:1.5rem;--text-5xl:1.875rem;--text-6xl:2.25rem}.module{padding:var(--space-8) var(--space-4)}.pattern-cards{grid-template-columns:1fr}.flow-steps{flex-direction:column}.flow-arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuenow="0"></div>
+  <div class="nav-inner">
+    <span class="nav-title">How FINAL|FINAL Works</span>
+    <div class="nav-dots">
+      <button class="nav-dot" data-target="hero" aria-label="Welcome"><span class="nav-dot-tooltip">Welcome</span></button>
+      <button class="nav-dot" data-target="module-1" aria-label="Module 1"><span class="nav-dot-tooltip">Meet the Cast</span></button>
+      <button class="nav-dot" data-target="module-2" aria-label="Module 2"><span class="nav-dot-tooltip">How They Talk</span></button>
+      <button class="nav-dot" data-target="module-3" aria-label="Module 3"><span class="nav-dot-tooltip">The Vault</span></button>
+      <button class="nav-dot" data-target="module-4" aria-label="Module 4"><span class="nav-dot-tooltip">Two Editors</span></button>
+      <button class="nav-dot" data-target="module-5" aria-label="Module 5"><span class="nav-dot-tooltip">Outside World</span></button>
+      <button class="nav-dot" data-target="module-6" aria-label="Module 6"><span class="nav-dot-tooltip">Big Picture</span></button>
+    </div>
+  </div>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-content animate-in">
+    <span class="hero-badge">Architecture Guide</span>
+    <h1>How <em>FINAL|FINAL</em> Works Under the Hood</h1>
+    <p class="hero-lead">A macOS writing app built with a native shell, two web editors, and a SQLite database. Here's how all the pieces fit together -- no programming experience required.</p>
+    <div class="hero-scroll-hint"><span>Scroll to begin</span><span style="font-size:1.5rem">&#8595;</span></div>
+  </div>
+</section>
+
+<!-- MODULE 1: Meet the Cast -->
+<section class="module" id="module-1" style="background:var(--color-bg-warm)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">01</span>
+      <h1 class="module-title">Meet the Cast</h1>
+      <p class="module-subtitle">Five specialized components work together to power FINAL|FINAL. Here's who does what.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Five Actors</h2>
+        <p>Think of FINAL|FINAL like a theater production. Each component has a single, well-defined role. When something breaks, knowing who's responsible tells you where to look.</p>
+        <div class="icon-rows stagger-children">
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-1)">&#127917;</div><div><strong>SwiftUI Shell</strong> <em style="color:var(--color-text-muted);font-size:var(--text-sm)">-- stage manager</em><p>The native macOS frame: window, toolbar, outline sidebar, status bar. Built with <span class="term" data-definition="SwiftUI is Apple's modern framework for building interfaces on Mac and iPhone. Instead of manually positioning every button, you describe what you want and SwiftUI handles the layout.">SwiftUI</span>, it orchestrates everything the user sees.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-2)">&#9997;</div><div><strong>Milkdown</strong> <em style="color:var(--color-text-muted);font-size:var(--text-sm)">-- WYSIWYG artist</em><p>The formatted text editor. Built on <span class="term" data-definition="ProseMirror is an open-source toolkit for building rich text editors on the web. It represents documents as structured trees of nodes (paragraphs, headings, lists). Notion, Confluence, and Milkdown are built on it.">ProseMirror</span>, it shows bold as bold, headings as large text. Hides all the <span class="term" data-definition="Markdown is a way to format text using simple symbols. # means heading, ** means bold, - means list item. Designed to be readable even before formatting.">markdown</span> symbols. Runs as a web page inside a <span class="term" data-definition="WKWebView is Apple's component for displaying web content inside a native app. It's a mini browser running inside the app, but users never see browser controls -- it just looks like part of the app.">WKWebView</span>.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-3)">&#128295;</div><div><strong>CodeMirror</strong> <em style="color:var(--color-text-muted);font-size:var(--text-sm)">-- source mechanic</em><p>The raw markdown editor. Shows the actual symbols (<code style="background:var(--color-bg-code);color:#CDD6F4;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:var(--text-sm)">## Heading</code>, <code style="background:var(--color-bg-code);color:#CDD6F4;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:var(--text-sm)">**bold**</code>) with syntax highlighting. Also runs inside a WKWebView.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-4)">&#128230;</div><div><strong>BlockSyncService</strong> <em style="color:var(--color-text-muted);font-size:var(--text-sm)">-- translator</em><p>The courier between editors and database. Every 2 seconds it asks "got any changes?" and writes them to storage. Speaks both <span class="term" data-definition="JavaScript is the programming language of the web. Every interactive website runs it. The editors in FINAL|FINAL are JavaScript apps running inside the native Mac app.">JavaScript</span> and <span class="term" data-definition="Swift is Apple's programming language for building apps. Fast, safe, modern. The native parts of FINAL|FINAL (toolbar, sidebar, database code) are all Swift.">Swift</span>.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-5)">&#128451;</div><div><strong>SQLite Database</strong> <em style="color:var(--color-text-muted);font-size:var(--text-sm)">-- the vault</em><p>The single source of truth. Every paragraph, heading, and list is a row in a <span class="term" data-definition="A database is an organized collection of data stored on your computer. Think of it as a very efficient digital filing cabinet that can instantly find any piece of information.">database</span> table. Nothing is "real" until it's saved here. The sidebar watches the database and re-renders automatically when something changes.</p></div></div>
+        </div>
+        <div class="callout callout-accent"><div class="callout-icon">&#128161;</div><div class="callout-content"><strong class="callout-title">Separation of Concerns</strong><p>Each component has exactly one job. Editor handles text. Sync handles communication. Database handles storage. Sidebar handles display. This pattern -- splitting responsibilities into focused roles -- is one of the most important ideas in software engineering.</p></div></div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">How They're Arranged</h2>
+        <p>Click any component to see what it does:</p>
+        <div class="arch-diagram" id="arch-1">
+          <div class="arch-zones">
+            <div class="arch-zone"><h4 class="arch-zone-label">Native (Swift)</h4>
+              <div class="arch-component" data-desc="The main window frame. Contains sidebar, editor, and annotation panel. Reads from EditorViewState to know what to display." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-1)">&#127917;</div><span>ContentView</span></div>
+              <div class="arch-component" data-desc="Displays headings as cards. Click to scroll, double-click to zoom. Watches the database -- doesn't hold its own data." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-1)">&#128196;</div><span>OutlineSidebar</span></div>
+              <div class="arch-component" data-desc="The brain: tracks editor mode, zoom state, word count, and the content state machine. Every view reads from this." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-1)">&#129504;</div><span>EditorViewState</span></div>
+            </div>
+            <div class="arch-zone"><h4 class="arch-zone-label">Web Editors (WKWebView)</h4>
+              <div class="arch-component" data-desc="WYSIWYG editor. Writing looks formatted. Built on ProseMirror with plugins for citations, annotations, footnotes, images, and block tracking." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-2)">&#9997;</div><span>Milkdown</span></div>
+              <div class="arch-component" data-desc="Source editor. Raw markdown with syntax highlighting. Built on CodeMirror 6. Good for precision editing." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-3)">&#128295;</div><span>CodeMirror</span></div>
+            </div>
+            <div class="arch-zone"><h4 class="arch-zone-label">Data Layer</h4>
+              <div class="arch-component" data-desc="Courier between editors and database. Every 2s asks the editor for changes via JavaScript, writes them to SQLite, sends permanent IDs back." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-4)">&#128230;</div><span>BlockSyncService</span></div>
+              <div class="arch-component" data-desc="SQLite via GRDB. Every block is a row with UUID, sort order, type, and markdown. Uses ValueObservation to notify the sidebar when data changes." onclick="showArchDesc(this)"><div class="arch-icon" style="background:var(--color-actor-5)">&#128451;</div><span>ProjectDatabase</span></div>
+            </div>
+          </div>
+          <div class="arch-description" id="arch-1-desc">Click any component to learn what it does</div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">A Conversation Between Components</h2>
+        <p>Here's what happens when you type a new heading. Watch the components talk to each other:</p>
+        <div class="chat-window" id="chat-1">
+          <div class="chat-header">&#128172; Component Chat -- "User types a heading"</div>
+          <div class="chat-messages" id="chat-1-messages">
+            <div class="chat-message" data-sender="milkdown" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-2)">Ed</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-2)">Milkdown</span><p>User just typed "## Literature Review". I've created a heading node with temp ID "tmp-8f3a".</p></div></div>
+            <div class="chat-message" data-sender="sync" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-4)">Sy</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-4)">BlockSyncService</span><p>*checks watch* 2 seconds passed. Hey Milkdown, hasBlockChanges()?</p></div></div>
+            <div class="chat-message" data-sender="milkdown" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-2)">Ed</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-2)">Milkdown</span><p>Yes! 1 insert: heading level 2, text "Literature Review", temp ID "tmp-8f3a".</p></div></div>
+            <div class="chat-message" data-sender="sync" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-4)">Sy</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-4)">BlockSyncService</span><p>Writing to database now...</p></div></div>
+            <div class="chat-message" data-sender="database" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-5)">DB</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-5)">SQLite</span><p>Inserted with permanent UUID "a1b2c3d4-e5f6-7890". Notifying all observers.</p></div></div>
+            <div class="chat-message" data-sender="sync" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-4)">Sy</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-4)">BlockSyncService</span><p>Milkdown, your "tmp-8f3a" is now "a1b2c3d4-e5f6-7890". Update your records.</p></div></div>
+            <div class="chat-message" data-sender="milkdown" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-2)">Ed</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-2)">Milkdown</span><p>Updated!</p></div></div>
+            <div class="chat-message" data-sender="sidebar" style="display:none"><div class="chat-avatar" style="background:var(--color-actor-1)">Si</div><div class="chat-bubble"><span class="chat-sender" style="color:var(--color-actor-1)">Sidebar</span><p>Database notification received -- new heading! Adding "Literature Review" card now.</p></div></div>
+          </div>
+          <div class="chat-typing" id="chat-1-typing" style="display:none"><div class="chat-avatar" id="chat-1-typing-avatar" style="background:var(--color-text-muted)">?</div><div class="chat-typing-dots"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
+          <div class="chat-controls"><button onclick="chatNext('chat-1')">Next Message</button><button onclick="chatPlayAll('chat-1')">Play All</button><button onclick="chatReset('chat-1')">Replay</button><span class="chat-progress" id="chat-1-progress">0 / 8 messages</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE 2: How They Talk -->
+<section class="module" id="module-2" style="background:var(--color-bg)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">02</span>
+      <h1 class="module-title">How They Talk</h1>
+      <p class="module-subtitle">The five actors speak two different languages. Here's the bridge that connects them.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Two Languages, One App</h2>
+        <p>The outer shell (toolbar, sidebar) is written in Swift. The inner editors are written in JavaScript. They run in completely different worlds -- like two diplomats who need a translator.</p>
+        <p>The bridge is <code style="background:var(--color-bg-code);color:#CDD6F4;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:var(--text-sm)">window.FinalFinal</code> -- a shared <span class="term" data-definition="An API (Application Programming Interface) is a set of agreed-upon commands that two pieces of software use to talk to each other. Like a restaurant menu: you don't go into the kitchen, you order from the menu.">API</span> that both sides use. Swift calls JavaScript <span class="term" data-definition="A function is a named, reusable piece of code that performs a specific task. You 'call' it by name. Like pressing a button on a vending machine -- you press B4 and get a specific snack.">functions</span> to ask questions. JavaScript calls Swift message handlers to send updates back.</p>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The API Menu</h2>
+        <p>Here's what Swift can ask the editors to do:</p>
+        <div class="badge-list stagger-children">
+          <div class="badge-item animate-in"><code class="badge-code">setContent(md)</code><span>Load new content into the editor</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">getContent()</code><span>Get the current markdown back</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">hasBlockChanges()</code><span>"Any changes since I last checked?"</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">getBlockChanges()</code><span>Give me the details: inserts, updates, deletes</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">confirmBlockIds(map)</code><span>"Your temp ID is now this permanent UUID"</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">setFocusMode(on)</code><span>Toggle paragraph dimming for focus</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">setTheme(css)</code><span>Apply new colors and fonts</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">scrollToLine(n)</code><span>Scroll to a specific line</span></div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Push + Poll</h2>
+        <p>Two communication patterns run simultaneously, each optimized for different kinds of data:</p>
+        <div class="pattern-cards stagger-children">
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-4)"><div class="pattern-icon" style="background:var(--color-actor-4)">&#9889;</div><h4 class="pattern-title">Push (instant, ~50ms)</h4><p class="pattern-desc">When you type, the editor immediately sends the new content to Swift via <span class="term" data-definition="postMessage is a browser API that lets JavaScript send data to the native app hosting the web view. It's like leaving a note in a shared mailbox -- instant and one-way.">postMessage</span>. Used for content that must be saved right away -- you don't want to lose keystrokes.</p></div>
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-2)"><div class="pattern-icon" style="background:var(--color-actor-2)">&#128336;</div><h4 class="pattern-title">Poll (periodic, every 2s)</h4><p class="pattern-desc">BlockSyncService wakes up on a timer and asks for structural changes -- new blocks created, blocks deleted, blocks reordered. Changes accumulate between polls, so they're processed in efficient batches.</p></div>
+        </div>
+        <p>Why both? Push gives speed for the content itself. Polling gives efficiency for structural metadata. It's like a newsroom: breaking news goes out immediately (push), but the daily summary is compiled on a schedule (poll).</p>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">See It In Action</h2>
+        <p>Click "Next Step" to trace what happens when you type a heading:</p>
+        <div class="flow-animation" id="flow-1">
+          <div class="flow-actors">
+            <div class="flow-actor" id="f1-a1"><div class="flow-actor-icon" style="background:var(--color-actor-2)">Ed</div><span>Milkdown</span></div>
+            <div class="flow-actor" id="f1-a2"><div class="flow-actor-icon" style="background:var(--color-actor-4)">Sy</div><span>BlockSync</span></div>
+            <div class="flow-actor" id="f1-a3"><div class="flow-actor-icon" style="background:var(--color-actor-5)">DB</div><span>SQLite</span></div>
+            <div class="flow-actor" id="f1-a4"><div class="flow-actor-icon" style="background:var(--color-actor-1)">Si</div><span>Sidebar</span></div>
+          </div>
+          <div class="flow-step-label" id="flow-1-label">Click "Next Step" to begin</div>
+          <div class="flow-controls"><button onclick="flowNext('flow-1')">Next Step</button><button onclick="flowReset('flow-1')">Restart</button><span class="flow-progress" id="flow-1-progress">Step 0 / 6</span></div>
+        </div>
+        <script>
+        window.flowAnims=window.flowAnims||{};
+        window.flowAnims['flow-1']={step:0,steps:[
+          {highlight:'f1-a1',label:'You type "## Literature Review" -- the keystroke lands in Milkdown'},
+          {highlight:'f1-a1',label:'Milkdown\'s ProseMirror plugin detects a new heading and assigns temp ID "tmp-8f3a"'},
+          {highlight:'f1-a2',label:'BlockSyncService wakes up (2-second timer) and asks: "hasBlockChanges()?"'},
+          {highlight:'f1-a2',label:'Editor responds: 1 insert, heading level 2, temp ID "tmp-8f3a"'},
+          {highlight:'f1-a3',label:'BlockSyncService writes to SQLite with permanent UUID. Database notifies all observers.'},
+          {highlight:'f1-a4',label:'Sidebar receives the notification and adds a "Literature Review" card. Done!'}
+        ]};
+        </script>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Polling Code</h2>
+        <p>BlockSyncService uses a repeating 2-second timer to check for structural changes. Here's the function that starts this loop -- it creates a timer that calls <code style="background:var(--color-bg-code);color:#CDD6F4;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:var(--text-sm)">pollBlockChanges()</code> on every tick:</p>
+        <div class="translation-block">
+          <div class="translation-code"><span class="translation-label">CODE</span>
+            <pre><code><span class="code-keyword">func</span> <span class="code-function">startPolling</span>() {
+    <span class="code-function">stopPolling</span>()
+    pollTimer = <span class="code-type">Timer</span>.<span class="code-function">scheduledTimer</span>(
+        <span class="code-property">withTimeInterval</span>: pollInterval,
+        <span class="code-property">repeats</span>: <span class="code-keyword">true</span>
+    ) { [<span class="code-keyword">weak</span> <span class="code-keyword">self</span>] _ <span class="code-keyword">in</span>
+        <span class="code-type">Task</span> { <span class="code-keyword">@MainActor in</span>
+            <span class="code-keyword">await</span> <span class="code-keyword">self</span>?.<span class="code-function">pollBlockChanges</span>()
+        }
+    }
+}</code></pre></div>
+          <div class="translation-english"><span class="translation-label">PLAIN ENGLISH</span><div class="translation-lines">
+              <p class="tl">Stop any existing timer first -- avoid stacking multiple timers on top of each other</p>
+              <p class="tl">Create a new timer that fires every 2 seconds and keeps repeating</p>
+              <p class="tl">Use "weak self" so neither the timer nor the service keeps the other alive forever (prevents a <span class="term" data-definition="A memory leak is when a program holds onto memory it no longer needs. 'Weak self' prevents two objects from keeping each other alive indefinitely -- like two people each waiting for the other to hang up the phone.">memory leak</span>)</p>
+              <p class="tl">Each tick: run on the <span class="term" data-definition="The main thread is where all user interface updates happen. If you do heavy work here, the app freezes. Think of it as the 'front desk' -- it handles customers (UI), so don't block it with filing (data processing).">main thread</span> and ask the editor for block changes</p>
+          </div></div>
+        </div>
+        <div class="callout callout-accent"><div class="callout-icon">&#128161;</div><div class="callout-content"><strong class="callout-title">Why 2 Seconds?</strong><p>The editor generates dozens of tiny changes per keystroke. Polling every 2 seconds batches them together -- like collecting mail once a day instead of checking the mailbox after every letter.</p></div></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE 3: The Vault -->
+<section class="module" id="module-3" style="background:var(--color-bg-warm)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">03</span>
+      <h1 class="module-title">The Vault</h1>
+      <p class="module-subtitle">When data arrives through the bridge, it's stored in a SQLite database. Here's how.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">A Portable Package</h2>
+        <p>Your entire project is a single <span class="term" data-definition="A macOS package is a folder that appears as a single file in Finder. Right-click and choose 'Show Package Contents' to see inside. Scrivener and Final Draft use the same pattern.">macOS package</span> -- a folder that appears as one file in Finder. You can back it up or share it just by copying:</p>
+        <div class="file-tree animate-in">
+          <div class="ft-root">
+            <span class="ft-name" style="color:var(--color-accent);font-weight:600">&#128193; MyBook.ff/</span>
+            <span class="ft-desc">Your project (appears as a single file in Finder)</span>
+            <div class="ft-children">
+              <div class="ft-file"><span class="ft-name">&#128196; content.sqlite</span><span class="ft-desc">The <span class="term" data-definition="SQLite is the most widely deployed database in the world -- in every iPhone, Android, Mac, and browser. It stores everything in a single file. Fast, reliable, perfect for local apps.">SQLite</span> database -- ALL your writing lives here</span></div>
+              <div class="ft-folder"><span class="ft-name">&#128193; media/</span><span class="ft-desc">Images and attachments</span></div>
+              <div class="ft-folder"><span class="ft-name">&#128193; references/</span><span class="ft-desc">Citation data for offline bibliography</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Everything Is a Block</h2>
+        <p>Your document isn't stored as one big blob of text. Instead, imagine a spreadsheet where each row is a structural element -- a paragraph, a heading, a list, a code block. Each row has a unique ID (a permanent fingerprint), a sort order (a decimal number that determines position), a type, and the actual content.</p>
+        <p>Here's the blueprint for that spreadsheet -- the database table that holds every block:</p>
+        <div class="translation-block">
+          <div class="translation-code"><span class="translation-label">DATABASE SCHEMA</span>
+            <pre><code><span class="code-keyword">CREATE TABLE</span> <span class="code-function">block</span> (
+    <span class="code-property">id</span>         <span class="code-type">TEXT PRIMARY KEY</span>,
+    <span class="code-property">sortOrder</span>  <span class="code-type">DOUBLE NOT NULL</span>,
+    <span class="code-property">blockType</span>  <span class="code-type">TEXT NOT NULL</span>,
+    <span class="code-property">textContent</span>  <span class="code-type">TEXT NOT NULL</span>,
+    <span class="code-property">markdownFragment</span> <span class="code-type">TEXT NOT NULL</span>,
+    <span class="code-property">headingLevel</span> <span class="code-type">INTEGER</span>,
+    <span class="code-property">status</span>     <span class="code-type">TEXT</span>,
+    <span class="code-property">wordCount</span>  <span class="code-type">INTEGER DEFAULT 0</span>
+);</code></pre></div>
+          <div class="translation-english"><span class="translation-label">WHAT EACH COLUMN IS FOR</span><div class="translation-lines">
+              <p class="tl"><strong>id</strong> -- a unique fingerprint (<span class="term" data-definition="A UUID (Universally Unique Identifier) is a long string like 'a1b2c3d4-e5f6-7890' guaranteed to be globally unique. Like a fingerprint for data -- no two are ever the same.">UUID</span>) so the app can track this block even if you edit it</p>
+              <p class="tl"><strong>sortOrder</strong> -- determines position in the document. 5.0 comes before 6.0. Decimals allow insertion without renumbering</p>
+              <p class="tl"><strong>blockType</strong> -- tells the app how to render it: "heading" gets big text, "bulletList" gets bullets, "paragraph" gets plain text</p>
+              <p class="tl"><strong>textContent</strong> -- plain text stripped of formatting. Used for fast full-text search and accurate word counting</p>
+              <p class="tl"><strong>markdownFragment</strong> -- the real content with all formatting symbols (## Heading, **bold**). Used to render the document</p>
+              <p class="tl"><strong>headingLevel</strong> -- 1 through 6 for headings (# through ######), empty for everything else</p>
+              <p class="tl"><strong>status</strong> -- workflow tracking: "next", "writing", "waiting", "review", or "final"</p>
+              <p class="tl"><strong>wordCount</strong> -- how many words in this block</p>
+          </div></div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Fractional Sort Order Trick</h2>
+        <p>How do you insert a new paragraph between two existing ones without renumbering everything? Use decimal sort orders and pick a number in between:</p>
+        <div class="step-cards stagger-children">
+          <div class="step-card animate-in"><div class="step-num" style="background:var(--color-actor-5)">5.0</div><div class="step-body"><strong>## Introduction</strong><p>Heading, sort order 5.0 -- stays put</p></div></div>
+          <div class="step-card animate-in" style="border-left-color:var(--color-actor-4)"><div class="step-num" style="background:var(--color-actor-4)">5.5</div><div class="step-body"><strong>New paragraph inserted later</strong><p>Gets 5.5 -- halfway between 5.0 and 6.0. No other blocks need to move!</p></div></div>
+          <div class="step-card animate-in"><div class="step-num" style="background:var(--color-actor-5)">6.0</div><div class="step-body"><strong>Existing next paragraph</strong><p>Sort order 6.0 -- unchanged</p></div></div>
+        </div>
+        <div class="callout callout-accent"><div class="callout-icon">&#128161;</div><div class="callout-content"><strong class="callout-title">This Also Powers Drag-and-Drop</strong><p>When you drag a section in the sidebar, the app just updates the sort order numbers on the affected blocks. The text stays in the database untouched -- only the position values change. With thousands of blocks, this is much faster than renumbering every row.</p></div></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE 4: Two Editors, One Document -->
+<section class="module" id="module-4" style="background:var(--color-bg)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">04</span>
+      <h1 class="module-title">Two Editors, One Document</h1>
+      <p class="module-subtitle">The same content displayed two different ways -- and the state machine that keeps them from colliding.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Same Song, Two Instruments</h2>
+        <p>Milkdown and CodeMirror both display the exact same content from the vault, but in completely different formats. Press Cmd+/ to toggle between them. The database view below is what's actually stored on disk -- both editors are just different lenses on the same data.</p>
+        <div class="layer-demo" id="layer-1">
+          <div class="layer-tabs">
+            <button class="layer-tab active" onclick="showLayer('layer-1','wysiwyg')">WYSIWYG (Milkdown)</button>
+            <button class="layer-tab" onclick="showLayer('layer-1','source')">Source (CodeMirror)</button>
+            <button class="layer-tab" onclick="showLayer('layer-1','database')">Database (blocks)</button>
+          </div>
+          <div class="layer-viewport">
+            <div class="layer active" id="layer-1-wysiwyg"><div style="padding:var(--space-4);font-family:Georgia,serif"><h2 style="font-size:1.5rem;margin-bottom:0.5rem;font-weight:bold">Literature Review</h2><p style="margin-bottom:0.5rem">The study of <strong>vibe coding</strong> has shown that non-technical users can build sophisticated software <span style="color:var(--color-accent);cursor:pointer">(Smith, 2024)</span>.</p><p>Previous research suggests that <em>understanding architecture</em> is the key skill.</p></div></div>
+            <div class="layer" id="layer-1-source"><pre style="background:var(--color-bg-code);color:#CDD6F4;padding:var(--space-4);border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:var(--text-sm);line-height:1.8"><code><span class="code-tag">## Literature Review</span>
+
+The study of <span class="code-keyword">**</span>vibe coding<span class="code-keyword">**</span> has shown that non-technical users can build sophisticated software <span class="code-string">[@smith2024]</span>.
+
+Previous research suggests that <span class="code-keyword">*</span>understanding architecture<span class="code-keyword">*</span> is the key skill.</code></pre></div>
+            <div class="layer" id="layer-1-database"><div style="font-family:var(--font-mono);font-size:var(--text-sm);overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--color-bg-warm)"><th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border)">id</th><th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border)">sort</th><th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border)">type</th><th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border)">content</th></tr></thead><tbody><tr><td style="padding:8px;border-bottom:1px solid var(--color-border-light);color:var(--color-text-muted)">a1b2..</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light)">5.0</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light);color:var(--color-accent)">heading</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light)">## Literature Review</td></tr><tr><td style="padding:8px;border-bottom:1px solid var(--color-border-light);color:var(--color-text-muted)">c3d4..</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light)">6.0</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light)">paragraph</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light)">The study of **vibe coding**...</td></tr><tr><td style="padding:8px;color:var(--color-text-muted)">e5f6..</td><td style="padding:8px">7.0</td><td style="padding:8px">paragraph</td><td style="padding:8px">Previous research suggests...</td></tr></tbody></table></div></div>
+          </div>
+          <p class="layer-description" id="layer-1-desc">WYSIWYG mode: formatted text. Bold is bold, headings are large. Markdown symbols hidden.</p>
+        </div>
+        <script>
+        window.layerDescs=window.layerDescs||{};
+        window.layerDescs['layer-1']={wysiwyg:'WYSIWYG mode: formatted text. Bold is bold, headings are large. Markdown symbols hidden.',source:'Source mode: raw markdown. ## means heading, ** means bold, [@key] means citation. What you see is what gets stored.',database:'Database view: each element is a separate row with its own ID, sort order, and type. This is what\'s on disk.'};
+        </script>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Tracking Identity Across Editors</h2>
+        <p>Both editors need to know which block is which so changes sync to the right database row. They solve this differently because they have fundamentally different document models:</p>
+        <div class="pattern-cards stagger-children">
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-2)"><div class="pattern-icon" style="background:var(--color-actor-2)">&#9997;</div><h4 class="pattern-title">Milkdown: Node Attributes</h4><p class="pattern-desc">ProseMirror represents documents as a tree of nodes. Each node carries invisible metadata including a <code style="font-family:var(--font-mono);font-size:var(--text-xs)">blockId</code>. You can't see it in the text -- it's like an invisible barcode.</p></div>
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-3)"><div class="pattern-icon" style="background:var(--color-actor-3)">&#128295;</div><h4 class="pattern-title">CodeMirror: Comment Anchors</h4><p class="pattern-desc">Plain text editor -- no concept of "nodes." Block IDs are embedded as <span class="term" data-definition="An HTML comment is text in code that's invisible when rendered. It looks like &lt;!-- text --&gt;. FINAL|FINAL uses &lt;!-- @bid:UUID --&gt; to mark where each block starts.">HTML comments</span>: <code style="font-family:var(--font-mono);font-size:var(--text-xs)">&lt;!-- @bid:UUID --&gt;</code></p></div>
+        </div>
+        <p>When you switch editors, the app translates between these systems: extracting node attributes into comment anchors, or vice versa.</p>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Traffic Controller</h2>
+        <p>Switching editors, zooming into a section, and dragging to reorder all involve replacing the editor's content. If two happen simultaneously, data gets corrupted. The app uses a <span class="term" data-definition="A state machine can only be in one 'state' at a time with clear transition rules. Like a traffic light: red, yellow, or green, never two at once. Each state has specific behaviors.">state machine</span> -- only one transition at a time:</p>
+        <div class="step-cards stagger-children">
+          <div class="step-card animate-in" style="border-left-color:var(--color-success)"><div class="step-num" style="background:var(--color-success)">&#10003;</div><div class="step-body"><strong>idle</strong><p>Normal operation. Polling active. Everything calm.</p></div></div>
+          <div class="step-card animate-in" style="border-left-color:var(--color-actor-4)"><div class="step-num" style="background:var(--color-actor-4)">&#8644;</div><div class="step-body"><strong>editorTransition</strong><p>Cmd+/ pressed. Saving cursor, swapping anchors, restoring position. Polling paused.</p></div></div>
+          <div class="step-card animate-in" style="border-left-color:var(--color-actor-2)"><div class="step-num" style="background:var(--color-actor-2)">&#128269;</div><div class="step-body"><strong>zoomTransition</strong><p>User double-clicked a section. Loading subset of blocks. Polling paused.</p></div></div>
+          <div class="step-card animate-in" style="border-left-color:var(--color-actor-3)"><div class="step-num" style="background:var(--color-actor-3)">&#128260;</div><div class="step-body"><strong>dragReorder</strong><p>Dragging sections in sidebar. Sync suppressed to prevent races.</p></div></div>
+        </div>
+        <div class="callout callout-accent"><div class="callout-icon">&#128161;</div><div class="callout-content"><strong class="callout-title">The 5-Second Watchdog</strong><p>What if a transition gets stuck? Every non-idle state has a 5-second watchdog timer. If the app hasn't returned to "idle" in time, the watchdog forces a reset -- like a dead man's switch on a train. Prevents permanent freezes.</p></div></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE 5: The Outside World -->
+<section class="module" id="module-5" style="background:var(--color-bg-warm)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">05</span>
+      <h1 class="module-title">The Outside World</h1>
+      <p class="module-subtitle">FINAL|FINAL connects to three external tools that extend its capabilities.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Supply Chain</h2>
+        <div class="icon-rows stagger-children">
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-5)">&#128218;</div><div><strong>Zotero + Better BibTeX</strong><p>Your citation library. The app searches it via a <span class="term" data-definition="A local API is a set of commands a program exposes on your own computer (usually at localhost:PORT). Zotero runs a tiny server on port 23119 so other apps can search your library without import/export.">local API</span> at <code style="font-family:var(--font-mono);font-size:var(--text-xs)">localhost:23119</code>. Everything on your computer -- no internet required.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-3)">&#128196;</div><div><strong>Pandoc</strong><p>Universal document converter. Takes your markdown and produces Word (.docx), PDF, or ODT. Like a professional typesetter on call.</p></div></div>
+          <div class="icon-row animate-in"><div class="icon-circle" style="background:var(--color-actor-4)">&#128221;</div><div><strong>LanguageTool</strong><p>AI-powered grammar checker. Can run as a free online service or a local server for privacy. Goes beyond macOS built-in spellcheck.</p></div></div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">The Citation Journey</h2>
+        <p>When you type <code style="background:var(--color-bg-code);color:#CDD6F4;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:var(--text-sm)">/cite</code> and select a paper:</p>
+        <div class="flow-steps stagger-children">
+          <div class="flow-step animate-in"><div class="flow-step-num">1</div><p>You type<br><code style="font-family:var(--font-mono);font-size:var(--text-xs)">/cite</code></p></div>
+          <div class="flow-arrow animate-in">&#8594;</div>
+          <div class="flow-step animate-in"><div class="flow-step-num">2</div><p>App queries<br>Zotero</p></div>
+          <div class="flow-arrow animate-in">&#8594;</div>
+          <div class="flow-step animate-in"><div class="flow-step-num">3</div><p>You pick<br>a source</p></div>
+          <div class="flow-arrow animate-in">&#8594;</div>
+          <div class="flow-step animate-in"><div class="flow-step-num">4</div><p>Citation key<br>inserted</p></div>
+          <div class="flow-arrow animate-in">&#8594;</div>
+          <div class="flow-step animate-in"><div class="flow-step-num">5</div><p>Bibliography<br>auto-generated</p></div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Checking Zotero's Availability</h2>
+        <p>Before citations work, the app sends a quick "are you there?" request to Zotero's local server. Here's the code -- it defines a thread-safe checker that connects to Zotero on your own machine and sends a minimal test request:</p>
+        <div class="translation-block">
+          <div class="translation-code"><span class="translation-label">CODE</span>
+            <pre><code><span class="code-keyword">actor</span> <span class="code-type">ZoteroChecker</span> {
+    <span class="code-keyword">private let</span> statusEndpoint =
+        <span class="code-string">"http://127.0.0.1:23119/</span>
+<span class="code-string">         better-bibtex/json-rpc"</span>
+
+    <span class="code-keyword">func</span> <span class="code-function">check</span>() <span class="code-keyword">async</span>
+        -> <span class="code-type">ZoteroStatus</span> {
+        <span class="code-comment">// Send a minimal request</span>
+        <span class="code-comment">// to see if Zotero responds</span>
+    }
+}</code></pre></div>
+          <div class="translation-english"><span class="translation-label">PLAIN ENGLISH</span><div class="translation-lines">
+              <p class="tl">Define this as an <span class="term" data-definition="An actor in Swift is a thread-safe worker. Only one piece of code can talk to it at a time, preventing data corruption. Like a ticket window -- one customer at a time.">actor</span> -- a thread-safe worker (one request at a time, no collisions)</p>
+              <p class="tl">The address to check: on YOUR computer (127.0.0.1), port 23119, at Better BibTeX's endpoint</p>
+              <p class="tl">A function that checks if Zotero is running -- sends a small test request, like knocking on a door to see if anyone's home</p>
+              <p class="tl">Returns a status: running, not running, missing plugin, or timed out</p>
+          </div></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE 6: The Big Picture -->
+<section class="module" id="module-6" style="background:var(--color-bg)">
+  <div class="module-content">
+    <header class="module-header animate-in">
+      <span class="module-number">06</span>
+      <h1 class="module-title">The Big Picture</h1>
+      <p class="module-subtitle">Why it was built this way, and how to find your way when things break.</p>
+    </header>
+    <div class="module-body">
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Architecture Decisions</h2>
+        <p>Every choice was a tradeoff. Understanding <em>why</em> things were built this way is what lets you steer AI coding tools confidently:</p>
+        <div class="pattern-cards stagger-children">
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-5)"><div class="pattern-icon" style="background:var(--color-actor-5)">&#128451;</div><h4 class="pattern-title">SQLite-First</h4><p class="pattern-desc"><strong>Why:</strong> Eliminates file watching, manifest sync, undo coordination. <strong>Tradeoff:</strong> Users can't edit files directly in Finder.</p></div>
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-2)"><div class="pattern-icon" style="background:var(--color-actor-2)">&#127760;</div><h4 class="pattern-title">Web Editors in Native App</h4><p class="pattern-desc"><strong>Why:</strong> ProseMirror and CodeMirror are battle-tested by millions. <strong>Tradeoff:</strong> Bridge complexity between Swift and JS.</p></div>
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-4)"><div class="pattern-icon" style="background:var(--color-actor-4)">&#9875;</div><h4 class="pattern-title">Block-Based Content</h4><p class="pattern-desc"><strong>Why:</strong> Surgical updates, easy reordering, per-block metadata. <strong>Tradeoff:</strong> More complex sync than one big string.</p></div>
+          <div class="pattern-card animate-in" style="border-top:3px solid var(--color-actor-1)"><div class="pattern-icon" style="background:var(--color-actor-1)">&#128736;</div><h4 class="pattern-title">State Machine</h4><p class="pattern-desc"><strong>Why:</strong> Prevents race conditions during zoom, editor switching, reordering. <strong>Tradeoff:</strong> More upfront design work.</p></div>
+        </div>
+      </section>
+      <section class="screen animate-in">
+        <h2 class="screen-heading">Debugging Map</h2>
+        <p>When something breaks, here's where to look:</p>
+        <div class="badge-list stagger-children">
+          <div class="badge-item animate-in"><code class="badge-code">Sidebar not updating</code><span>Check BlockSyncService polling + database ValueObservation + contentState</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">Content lost on switch</code><span>Was a flush completed before the editor swap? Check state machine.</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">Citations broken</code><span>Is Zotero running? Better BibTeX installed? Check port 23119.</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">Export fails</code><span>Is Pandoc installed? Check PandocLocator. Valid markdown?</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">Editor looks stale</code><span>Clear Derived Data. Did the web build (pnpm build) succeed?</span></div>
+          <div class="badge-item animate-in"><code class="badge-code">Zoom stuck</code><span>5-second watchdog in EditorViewState. Is contentState returning to idle?</span></div>
+        </div>
+      </section>
+      <section class="screen animate-in" style="text-align:center;padding:var(--space-16) 0">
+        <h2 class="screen-heading" style="font-size:var(--text-3xl)">That's the Full Picture</h2>
+        <p style="font-size:var(--text-lg);color:var(--color-text-secondary);max-width:600px;margin:0 auto var(--space-6)">FINAL|FINAL combines a hybrid native/web architecture, database-first storage, block-based content, state machines, and external integrations into a cohesive writing tool.</p>
+        <div class="callout callout-accent" style="max-width:600px;margin:0 auto;text-align:left"><div class="callout-icon">&#127891;</div><div class="callout-content"><strong class="callout-title">Useful Vocabulary</strong><p>When working with an AI coding assistant on this codebase, you can now say things like: "Put this in the sync service, not the view layer," or "Use a state machine to prevent race conditions," or "Store this in the database and observe it reactively."</p></div></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+'use strict';
+var progressBar=document.getElementById('progress-bar');
+var navDots=document.querySelectorAll('.nav-dot');
+var modules=document.querySelectorAll('.module,.hero');
+var currentModuleIndex=0;
+function updateProgress(){var s=window.scrollY,h=document.documentElement.scrollHeight-window.innerHeight;progressBar.style.width=(h>0?(s/h)*100:0)+'%'}
+function updateDots(){var active=0;modules.forEach(function(m,i){if(m.getBoundingClientRect().top<=window.innerHeight/2)active=i});currentModuleIndex=active;navDots.forEach(function(d,i){d.classList.remove('current');if(i===active)d.classList.add('current');else if(i<active)d.classList.add('visited')})}
+window.addEventListener('scroll',function(){requestAnimationFrame(function(){updateProgress();updateDots()})},{passive:true});
+navDots.forEach(function(d){d.addEventListener('click',function(){var t=document.getElementById(d.dataset.target);if(t)t.scrollIntoView({behavior:'smooth'})})});
+document.addEventListener('keydown',function(e){if(['INPUT','TEXTAREA'].includes(e.target.tagName))return;if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();modules[Math.min(currentModuleIndex+1,modules.length-1)].scrollIntoView({behavior:'smooth'})}if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();modules[Math.max(currentModuleIndex-1,0)].scrollIntoView({behavior:'smooth'})}});
+var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}})},{rootMargin:'0px 0px -10% 0px',threshold:0.1});
+document.querySelectorAll('.animate-in').forEach(function(el){obs.observe(el)});
+document.querySelectorAll('.stagger-children').forEach(function(p){Array.from(p.children).forEach(function(c,i){c.style.setProperty('--stagger-index',i)})});
+var activeTooltip=null;
+function positionTip(term,tip){var r=term.getBoundingClientRect(),w=Math.min(320,window.innerWidth*0.8);tip.style.width=w+'px';var left=Math.max(8,Math.min(r.left+r.width/2-w/2,window.innerWidth-w-8));tip.style.left=left+'px';document.body.appendChild(tip);var th=tip.offsetHeight;if(r.top-th-8<0){tip.style.top=(r.bottom+8)+'px';tip.classList.add('flip')}else{tip.style.top=(r.top-th-8)+'px';tip.classList.remove('flip')}}
+document.querySelectorAll('.term').forEach(function(term){var tip=document.createElement('span');tip.className='term-tooltip';tip.textContent=term.dataset.definition;term.addEventListener('mouseenter',function(){if(activeTooltip&&activeTooltip!==tip){activeTooltip.classList.remove('visible');activeTooltip.remove()}positionTip(term,tip);requestAnimationFrame(function(){tip.classList.add('visible')});activeTooltip=tip});term.addEventListener('mouseleave',function(){tip.classList.remove('visible');setTimeout(function(){if(!tip.classList.contains('visible'))tip.remove()},150);activeTooltip=null});term.addEventListener('click',function(e){e.stopPropagation();if(activeTooltip&&activeTooltip!==tip){activeTooltip.classList.remove('visible');activeTooltip.remove()}if(tip.classList.contains('visible')){tip.classList.remove('visible');tip.remove();activeTooltip=null}else{positionTip(term,tip);requestAnimationFrame(function(){tip.classList.add('visible')});activeTooltip=tip}})});
+document.addEventListener('click',function(){if(activeTooltip){activeTooltip.classList.remove('visible');activeTooltip.remove();activeTooltip=null}});
+var chatStates={};
+var chatActorColors={milkdown:{i:'Ed',c:'var(--color-actor-2)'},sync:{i:'Sy',c:'var(--color-actor-4)'},database:{i:'DB',c:'var(--color-actor-5)'},sidebar:{i:'Si',c:'var(--color-actor-1)'}};
+function getChatState(id){if(!chatStates[id])chatStates[id]={index:0,messages:document.querySelectorAll('#'+id+'-messages .chat-message'),playing:false};return chatStates[id]}
+window.chatNext=function(id){var s=getChatState(id);if(s.index>=s.messages.length)return;var msg=s.messages[s.index],sender=msg.dataset.sender,actor=chatActorColors[sender];var typing=document.getElementById(id+'-typing'),av=document.getElementById(id+'-typing-avatar');if(actor){av.textContent=actor.i;av.style.background=actor.c}typing.style.display='flex';setTimeout(function(){typing.style.display='none';msg.style.display='flex';s.index++;document.getElementById(id+'-progress').textContent=s.index+' / '+s.messages.length+' messages';document.getElementById(id+'-messages').scrollTop=9999},800)};
+window.chatPlayAll=function(id){var s=getChatState(id);if(s.playing)return;s.playing=true;var iv=setInterval(function(){if(s.index>=s.messages.length){clearInterval(iv);s.playing=false;return}chatNext(id)},1500)};
+window.chatReset=function(id){var s=getChatState(id);s.index=0;s.playing=false;s.messages.forEach(function(m){m.style.display='none'});document.getElementById(id+'-typing').style.display='none';document.getElementById(id+'-progress').textContent='0 / '+s.messages.length+' messages'};
+window.showArchDesc=function(el){var d=el.closest('.arch-diagram');d.querySelectorAll('.arch-component').forEach(function(c){c.classList.remove('active')});el.classList.add('active');d.querySelector('.arch-description').textContent=el.dataset.desc};
+window.showLayer=function(demoId,name){var d=document.getElementById(demoId);d.querySelectorAll('.layer-tab').forEach(function(t){t.classList.remove('active')});d.querySelectorAll('.layer').forEach(function(l){l.classList.remove('active')});event.target.classList.add('active');var layer=document.getElementById(demoId+'-'+name);if(layer)layer.classList.add('active');var desc=document.getElementById(demoId+'-desc');var descs=window.layerDescs&&window.layerDescs[demoId];if(desc&&descs&&descs[name])desc.textContent=descs[name]};
+/* BUG FIX: use ||={} to not overwrite inline script configs */
+window.flowAnims=window.flowAnims||{};
+window.flowNext=function(id){var f=window.flowAnims[id];if(!f||f.step>=f.steps.length)return;var s=f.steps[f.step];document.querySelectorAll('#'+id+' .flow-actor').forEach(function(a){a.classList.remove('active')});document.getElementById(s.highlight).classList.add('active');document.getElementById(id+'-label').textContent=s.label;f.step++;document.getElementById(id+'-progress').textContent='Step '+f.step+' / '+f.steps.length};
+window.flowReset=function(id){var f=window.flowAnims[id];if(!f)return;f.step=0;document.querySelectorAll('#'+id+' .flow-actor').forEach(function(a){a.classList.remove('active')});document.getElementById(id+'-label').textContent='Click "Next Step" to begin';document.getElementById(id+'-progress').textContent='Step 0 / '+f.steps.length};
+updateProgress();updateDots();
+})();
+</script>
+</body>
+</html>
