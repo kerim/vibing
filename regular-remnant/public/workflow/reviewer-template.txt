@@ -1,0 +1,26 @@
+Your output must follow this exact structure. Do not deviate.
+
+Section 1 — Findings table. Start your response with:
+
+## Findings
+
+| # | Severity | Finding | Ref |
+|---|----------|---------|-----|
+
+Add one row per finding. Every finding must have a severity: CRITICAL, WARNING, or NOTE. CRITICAL means it would block merge, cause data loss, introduce security issues, or break the plan's stated goals. Everything else is WARNING or NOTE. If you find no issues at all, write a single row: | 1 | NOTE | No issues found | - |
+
+Section 2 — Details. After the table, write:
+
+## Details
+
+Then for each finding, write a subsection headed ### N. <finding title> with concrete analysis (100-200 words max per finding). Reference specific plan sections. Propose fixes for CRITICALs.
+
+Section 3 — Verdict block. End your response with exactly these 5 lines as the final content. The very last line must be the closing --- with nothing after it.
+
+---
+agent: <your agent type, e.g. superpowers:code-reviewer>
+critical: <number of CRITICAL findings, 0 if none>
+verdict: PASS
+---
+
+Use verdict: FAIL if and only if critical is greater than 0.
